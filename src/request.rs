@@ -1,7 +1,11 @@
 use std::io::prelude::*;
 use std::net::TcpStream;
 use regex::Regex;
+use chalk::Chalk;
+use chalk::colors::Colors;
 use header::Header as Header;
+
+// no scheme
 
 #[allow(dead_code)]
 pub struct Request {
@@ -10,6 +14,7 @@ pub struct Request {
     headers: Vec<Header>
 }
 
+#[allow(dead_code)]
 static RES_FOR_BROWSER: &'static str = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\nOK";
 
 // Read the request and return a Request object.
@@ -28,21 +33,33 @@ fn read_request(stream: &mut TcpStream) -> Option<Request> {
     let header_buf = String::from_utf8_lossy(&mut buf);
     let mut iterator = header_buf.split("\r\n");
     let request_line: &str = iterator.next().unwrap();
-    let request_tokens: Vec<&str> = request_line.split(" ").collect();
+    let mut request_tokens: Vec<&str> = request_line.split(" ").collect();
     let url: &str = request_tokens[1];
+
+    let host_line: &str = iterator.next().unwrap();
+    request_tokens = host_line.split(" ").collect();
+    let host: &str = request_tokens[1];
 
     let re = Regex::new(r"(\w*?)://(.*?)/(.*)").unwrap();
 
-    let caps = match re.captures(url) {
-        None => { return None },
-        Some(value) => { value }
-    };
+    // If it is not an absolute-url, then use the host and path from 
+    // the request line.
+    let caps = re.captures(url);
 
     let mut request = Request {
-        hostname: caps.at(3).unwrap().to_string(),
-        path: caps.at(3).unwrap().to_string(),
+        hostname: String::new(),
+        path: String::new(),
         headers: Vec::new()
     };
+
+    if caps.is_none() {
+        request.hostname = host.to_string();
+        request.path = url.to_string();
+    } else {
+        let caps_unwrapped = caps.unwrap();
+        request.hostname = caps_unwrapped.at(2).unwrap().to_string();
+        request.path = caps_unwrapped.at(3).unwrap().to_string();
+    }
 
     for header in iterator {
         if header.len() > 0 {
@@ -71,7 +88,13 @@ pub fn handle_request(mut stream: TcpStream) {
         Some(_) => {},
     }
 
-    println!("{:?}", request.unwrap().hostname);
+    let _uw_request = request.unwrap();
+    let mut msg = String::from("GET: ");
+    msg.push_str(&_uw_request.path);
+    let green_msg = Chalk::new(Colors::Green, &msg).color();
+    println!("{}", green_msg);
+    // println!("path: {}", _uw_request.path);
+    // println!("headers: {:?}", _uw_request.headers);
 
     // send response
     stream.write(RES_FOR_BROWSER.as_bytes()).unwrap();
