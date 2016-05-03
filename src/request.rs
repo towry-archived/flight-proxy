@@ -73,10 +73,16 @@ fn read_request(stream: &mut TcpStream) -> Option<Request> {
                 request.headers.push(Header {
                     key: tokens[0].to_string(),
                     value: tokens[1].to_string()
-                });
+                });   
             }
         }
     }
+
+    // debug 
+    request.headers.push(Header {
+        key: String::from("Host"),
+        value: String::from("static.moseeker.com")
+    });
 
     return Some(request);
 }
@@ -97,6 +103,13 @@ pub fn handle_request(mut stream: TcpStream) {
 
     log_request(&uw_request);
 
+    println!("{:?}", &uw_request.headers);
+
+    // debug 
+    let address_string = format!("{}:{}", "static.moseeker.com", 80);
+    let mut server_stream = TcpStream::connect(&*address_string).unwrap();
+    send_request(&uw_request, &mut server_stream);
+
     // search and fetch the assets, if assets not found,
     // redirect the request to remote
     // let mut content = Assets::get_asset(&uwRequest.path);
@@ -104,10 +117,28 @@ pub fn handle_request(mut stream: TcpStream) {
     //     content = send_request(&stream);
     // }
 
+    let mut content_buf: Vec<u8> = Vec::new();
+    server_stream.read_to_end(&mut content_buf).unwrap();
+  
+    // println!("{}", String::from_utf8_lossy(&content_buf));
     // send response
-    stream.write(RES_FOR_BROWSER.as_bytes()).unwrap();
+    // stream.write(RES_FOR_BROWSER.as_bytes()).unwrap();
+    stream.write(&content_buf).unwrap();
 }
 
+fn send_request(request: &Request, stream: &mut TcpStream) {
+    let request_line = b"GET /hr/app.74843587.css HTTP/1.1";
+    // request.hostname = String::from("static.moseeker.com");
+    stream.write(request_line).unwrap();
+
+    for header in request.headers.iter() {
+        let outbound_header = format!("{}: {}\r\n", header.key, header.value);
+        stream.write(&outbound_header.into_bytes()).unwrap();
+    }
+
+    stream.write(b"Connection: close\r\n").unwrap();
+    stream.write(b"\r\n").unwrap();
+}
 
 fn log_request(request: &Request) {
     let mut message = String::from("GET: ");
