@@ -9,19 +9,41 @@ pub struct Node {
     pub is_dir: bool,
     pub is_file: bool,
     child: Vec<Node>,
-    parent: Option<Node>,
+    parent: &Option<Box<Node>>,
     pub path: String
 }
 
+pub struct Tree {
+    base: String,
+    tree: Option<Node>
+}
+
+fn callback(entry: &DirEntry, parentNode: Node) -> io::Result<()> {
+    let is_file: bool;
+
+    // unwrap 
+    if try!(fs::metadata(entry.path())).is_file() {
+        is_file = true;
+    } else {
+        is_file = false;
+    }
+
+    Node::new(String::from(entry.path().to_str().unwrap()), Some(Box::new(parentNode)), is_file).unwrap();
+
+    Ok(())
+}
+
 impl Node {
-    pub fn new(dir: String, parent: Option<Node>, is_file: bool) -> Result<Node, _> {
+    pub fn new(dir: String, parent: Option<Box<Node>>, is_file: bool) -> Result<Node, ()> {
         if is_file {
             let node = Node {
-                name: util::path::basename(dir),
+                name: util::path::basename(dir.clone()),
                 is_file: is_file,
                 is_dir: false,
-                path: dir
-            }
+                path: dir,
+                parent: &parent,
+                child: Vec::new()
+            };
 
             if parent.is_some() {
                 parent.unwrap().push(node);
@@ -35,32 +57,24 @@ impl Node {
             name: util::path::basename(dir),
             is_dir: true,
             is_file: false,
-            path: dir
-        }
+            path: dir,
+            parent: &parent,
+            child: Vec::new()
+        };
 
         if parent.is_some() {
             parent.unwrap().push(parentNode);
         }
 
         // read dir and create the tree 
-        let path = Path::new(dir);
-        visit_dirs(&path, move |entry| {
-            let is_file: bool;
-
-            if try!(fs::metadata(entry.path()).is_file()) {
-                is_file = true;
-            } else {
-                is_file = false;
-            }
-
-            Node::new(String::from(entry.path().to_str().unwrap()), Some(parentNode), is_file).unwrap();
-        });
+        let path = Path::new(&dir);
+        visit_dirs(&path, &callback, parentNode);
 
         return Ok(parentNode);
     }
 
-    pub fn push(&mut self, Node) {
-        self.child.push(Node);
+    pub fn push(&mut self, node: Node) {
+        self.child.push(node);
     }
 
     pub fn children(&self) -> Vec<Node> {
@@ -68,14 +82,41 @@ impl Node {
     }
 }
 
+impl Tree {
+    pub fn search(&self, path: String) -> Option<Node> {
+        self.fresh();
 
-fn visit_dirs(dir: &Path, cb: &Fn(&DirEntry)) -> io::Result<()> {
+        None
+    }
+
+    pub fn fresh(&mut self) {
+        self.tree = Node::new(self.base, None, false).ok();
+    }
+}
+
+
+fn visit_dirs(dir: &Path, cb: &Fn(&DirEntry, Node) -> io::Result<()>, node: Node) -> io::Result<()> {
     if try!(fs::metadata(dir)).is_dir() {
         for entry in try!(fs::read_dir(dir)) {
             let entry = try!(entry);
-            cb(&entry);
+            cb(&entry, node);
         }
     }
     Ok(())
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tree_fresh() {
+        let tree = Tree {
+            base: String::from("/Users/towry/Projects/mobile-flight/build"),
+            tree: None
+        };
+
+        tree.fresh();
+    }
+}

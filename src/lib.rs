@@ -6,3 +6,4 @@ extern crate hyper;
 pub mod config;
 pub mod handler;
 pub mod util;
+pub mod tree;
