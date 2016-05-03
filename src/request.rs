@@ -3,7 +3,12 @@ use std::net::TcpStream;
 use regex::Regex;
 use chalk::Chalk;
 use chalk::colors::Colors;
-use header::Header as Header;
+
+#[derive(Debug)]
+pub struct Header {
+    pub key: String,
+    pub value: String
+}
 
 // no scheme
 
@@ -88,14 +93,26 @@ pub fn handle_request(mut stream: TcpStream) {
         Some(_) => {},
     }
 
-    let _uw_request = request.unwrap();
-    let mut msg = String::from("GET: ");
-    msg.push_str(&_uw_request.path);
-    let green_msg = Chalk::new(Colors::Green, &msg).color();
-    println!("{}", green_msg);
-    // println!("path: {}", _uw_request.path);
-    // println!("headers: {:?}", _uw_request.headers);
+    let uwRequest = request.unwrap();
+
+    log_request(&uwRequest);
+
+    // search and fetch the assets, if assets not found,
+    // redirect the request to remote
+    // let mut content = Assets::get_asset(&uwRequest.path);
+    // if content.is_none() {
+    //     content = send_request(&stream);
+    // }
 
     // send response
     stream.write(RES_FOR_BROWSER.as_bytes()).unwrap();
+}
+
+
+fn log_request(request: &Request) {
+    let mut message = String::from("GET: ");
+    message.push_str(&request.path);
+
+    let green_message = Chalk::new(Colors::Green, &message).color();
+    println!("{}", green_message);
 }

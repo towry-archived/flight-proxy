@@ -1,3 +1,3 @@
 
-remote_static: http://static.moseeker.com
-local_search: ./dist/assets
+remote_url: http://static.moseeker.com
+search_path: ./dist/assets

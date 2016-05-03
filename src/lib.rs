@@ -1,5 +1,7 @@
 extern crate regex;
 extern crate chalk;
+extern crate yaml_rust;
 
-mod header;
 pub mod request;
+pub mod assets;
+pub mod config;
