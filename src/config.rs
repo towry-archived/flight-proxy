@@ -1,10 +1,11 @@
 
 use std::process;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::io::prelude::*;
 use std::fs::File;
 use std::error::Error;
 use yaml_rust::YamlLoader;
+use std::env;
 
 pub struct Config {
     pub remote_url: String,
@@ -54,6 +55,11 @@ impl Config {
         // what the ...
         // ther must be a better way.
         self.remote_url = doc["remote_url"].as_str().unwrap().to_string();
-        self.search_path = doc["search_path"].as_str().unwrap().to_string();
+
+        let search_path = doc["search_path"].as_str().unwrap().to_string();
+        let current_dir = env::current_dir().unwrap();
+
+        let fullpath = current_dir.join(Path::new(&search_path));
+        self.search_path = fullpath.to_str().unwrap().to_string();
     }
 }
