@@ -23,7 +23,9 @@ fn main() {
     let mut p = env::current_dir().unwrap();
     p.push("proxy");
     p.set_extension("yml");
-    config::Config::load_from_path(&p);
+
+    let mut _config = config::Config::new();
+    _config.load_from_path(&p);
 
     // running the server
     println!("{} is running at port: {}", PRG_NAME, 3456);

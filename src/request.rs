@@ -93,9 +93,9 @@ pub fn handle_request(mut stream: TcpStream) {
         Some(_) => {},
     }
 
-    let uwRequest = request.unwrap();
+    let uw_request = request.unwrap();
 
-    log_request(&uwRequest);
+    log_request(&uw_request);
 
     // search and fetch the assets, if assets not found,
     // redirect the request to remote

@@ -1,46 +1,30 @@
 
 use std::process;
-use std::sync;
 use std::path::PathBuf;
 use std::io::prelude::*;
 use std::fs::File;
 use std::error::Error;
 use yaml_rust::YamlLoader;
 
-pub struct Config<'a> {
-    remote_url: &'a str,
+pub struct Config {
+    pub remote_url: String,
     // maybe a slice of String
-    search_path: &'a str 
+    pub search_path: String 
 }
 
 // still confuse with the lifetime modifier.
 
-static INIT: sync::Once = sync::ONCE_INIT;
-static mut CONFIG: Config<'static> = Config {
-    remote_url: "",
-    search_path: ""
-};
+impl Config {
+    pub fn new() -> Config {
+        let config = Config {
+            remote_url: "".to_owned(),
+            search_path: "".to_owned()
+        };
 
-
-impl<'a> Config<'a> {
-    pub fn init(remote_url: &'static str, search_path: &'static str) {
-        unsafe {
-            INIT.call_once(|| {
-                CONFIG.remote_url = remote_url;
-                CONFIG.search_path = search_path;
-            });
-
-            // at exit
-        }
+        return config;
     }
 
-    pub fn get() -> &'a Config<'a> {
-        unsafe {
-            return &CONFIG;
-        }
-    }
-
-    pub fn load_from_path(p: &PathBuf) {
+    pub fn load_from_path(&mut self, p: &PathBuf) {
         // we should borrow the p instead of move.
         // because the p will be used later.
         let mut file = match File::open(p) {
@@ -63,10 +47,13 @@ impl<'a> Config<'a> {
         }
 
         let docs = YamlLoader::load_from_str(&buffer).unwrap();
-        let doc = docs[0];
-        static remote_url: &'static str = doc["remote_url"].as_str().unwrap();
-        static search_path: &'static str = doc["search_path"].as_str().unwrap();
+        let doc = &docs[0];
+        // static remote_url: &'static str = doc["remote_url"].as_str().unwrap();
+        // static search_path: &'static str = doc["search_path"].as_str().unwrap();
         
-        Config::init(remote_url, search_path);
+        // what the ...
+        // ther must be a better way.
+        self.remote_url = doc["remote_url"].as_str().unwrap().to_string();
+        self.search_path = doc["search_path"].as_str().unwrap().to_string();
     }
 }
