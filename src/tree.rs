@@ -4,21 +4,21 @@ use std::fs::{self, DirEntry};
 use std::path::Path;
 use util;
 
-pub struct Node {
+pub struct Node<'a> {
     pub name: String,
     pub is_dir: bool,
     pub is_file: bool,
-    child: Vec<&Box<Node>>,
-    parent: Option<&Node>,
+    child: Vec<&'a Box<Node<'a>>>,
+    parent: Option<&'a Node<'a>>,
     pub path: String
 }
 
-pub struct Tree {
+pub struct Tree<'a> {
     base: String,
-    tree: Option<Box<Node>>
+    tree: Option<Box<Node<'a>>>
 }
 
-fn callback (entry: &DirEntry, parent_node: &mut Node) -> io::Result<()> {
+fn callback<'a>(entry: &DirEntry, parent_node: &'a mut Node<'a>) -> io::Result<()> {
     let is_file: bool;
 
     // unwrap 
@@ -33,8 +33,8 @@ fn callback (entry: &DirEntry, parent_node: &mut Node) -> io::Result<()> {
     Ok(())
 }
 
-impl Node {
-    pub fn new(dir: String, parent: Option<&Node>, is_file: bool) -> Result<Box<Node>, ()> {
+impl<'a> Node<'a> {
+    pub fn new(dir: String, parent: Option<&'a Node<'a>>, is_file: bool) -> Result<Box<Node<'a>>, ()> {
         let uw_parent = parent.unwrap();
 
         if is_file {
@@ -66,13 +66,13 @@ impl Node {
 
         let parent_node_ref = Box::new(parent_node);
 
-        if uw_parent.is_some() {
+        if parent.is_some() {
             uw_parent.push(&parent_node_ref);
         }
 
         // read dir and create the tree 
         let path = Path::new(&dir);
-        visit_dirs(&path, &callback, parent_node_ref);
+        visit_dirs(&path, &callback, &mut *parent_node_ref);
 
         return Ok(parent_node_ref);
     }
@@ -86,8 +86,8 @@ impl Node {
     }
 }
 
-impl Tree {
-    pub fn search(&self, path: String) -> Option<Node> {
+impl<'a> Tree<'a> {
+    pub fn search(&self, path: String) -> Option<Node<'a>> {
         self.fresh();
 
         None
